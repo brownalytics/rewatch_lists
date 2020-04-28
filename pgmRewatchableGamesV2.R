@@ -3,6 +3,16 @@
 # Program Name:  pgmExcitingGamesV2.R
 # 
 # Purpose:  Create a list of the best reg/post games to watch during quarantine for any team
+#
+# Instructions:
+#   1- Load function by running code below
+#   2- type function name fncGetTeamGames( and set the following variables:
+#     2a- specify team = as the team you want to pull data for
+#     2b- specify min_szn = as the earliest season you want to pull data for
+#     2c- specify max_szn = as the latest season you want to pull data for
+#   3- function will run and output results in the viewer pane, as well as saving a .csv of the created list to your
+#     desktop
+#
 # 
 # Program Change Log:
 # 2020-04-27  Code created
@@ -14,12 +24,17 @@ options(stringsAsFactors = FALSE, warn = -1)
 
 fncGetTeamGames <- function(team = team, min_szn = min_szn, max_szn = max_szn){
 
+rm(game_data, szns, games, pbp, game_scores, team_smy, team_epa, opp_epa, game_epa, ovr_watchlist
+   ,tm_nickname, desk_path)  
+  
 require(tidyverse)
 require(nflfastR)
 require(nflscrapR)
 require(glue)
 require(gt)
+require(furrr)
   
+
 team = toupper(team)
 min_szn = as.numeric(min_szn)
 max_szn = as.numeric(max_szn)
@@ -33,9 +48,9 @@ game_data = lapply(szns, fast_scraper_schedules) %>%
 
 games = game_data %>% pull(game_id)
 
-pbp = lapply(games, fast_scraper)
+pbp = fast_scraper(games, pp = TRUE)
 
-pbp = do.call('rbind', pbp)
+# pbp = do.call('rbind', pbp)
 
 game_scores = pbp %>% select(game_id, home_team, away_team, total_home_score, total_away_score) %>%
   group_by(game_id, home_team, away_team) %>% 
@@ -80,7 +95,7 @@ tm_nickname = game_data %>%
   pull(home_nickname) %>% 
   unique()
 
-ovr_watchlist %>% 
+table_out <- ovr_watchlist %>% 
   arrange(desc(watch_index)) %>% 
   gt() %>% 
   tab_header(title = glue('{tm_nickname} Quarantine Game Rewatch Ranking')
@@ -107,6 +122,8 @@ ovr_watchlist %>%
     gsub("\\\\", "/", .)
   
   write.csv(ovr_watchlist, glue::glue('{desk_path}/{tolower(tm_nickname)}_rewatchability.csv'), row.names = FALSE)
+  
+  return(table_out)
   
 }
 
